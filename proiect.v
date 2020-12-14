@@ -56,25 +56,34 @@ Compute (env "x").
        basically its declaration type is nat, then we can not change its value 
        to a boolean value and the "update" function returns "err_assign" 
 
-Please note that the previous possible usecases can be different for your implementation... :)
-This is just an idea of how we can simulate the variables declaration + basic typing rules.
-
-Provide your own implementation for the update function.
-
-In order to compare the types of the variables (this can be useful when implementing the "update" function), 
-you can implement a method, "check_eq_over_types", with the following signature:
-
-Definition check_eq_over_types (t1 : Result) (t2 : Result) : bool
-
 *)
 
 Definition check_eq_over_types (t1 : Result) (t2 : Result) : bool :=
   match t1 with
+    | err_undecl => match t2 with
+                      | err_undecl => true
+                      | _ => false
+                    end
     | err_assign => match t2 with 
                      | err_assign => true
                      | _ => false
                      end
-  (* Fill in the implementation for the rest of the cases... *)
+    | default => match t2 with
+                   | default => true
+                   | _ => false
+                 end
+    | res_nat => match t2 with
+                   | res_nat => true
+                   | _ => false
+                 end
+    | res_bool => match t2 with
+                    | res_bool => true
+                    | _ => false
+                  end
+    | res_str => match t2 with
+                   | res_str => true
+                   | _ => false
+                 end
   end.
 
 Definition update (env : Env) (x : string) (v : Result) : Env :=
