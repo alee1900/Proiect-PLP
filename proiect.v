@@ -490,9 +490,10 @@ Inductive eval : Stmt -> Env -> Env -> Prop :=
                  b ={ sigma }=> true ->
                  (s ;; while b s) -{ sigma }-> sigma' ->
                  while b s -{ sigma }-> sigma'
-  | e_switch: forall a i s sigma sigma',
+  | e_switch: forall a i c b s sigma sigma', (* I don't know if this is correct *)
               a ={ sigma }=> i ->
-              
+              b = (Nat.eqb i c) ->
+              switch b s -{ sigma }-> sigma'
   where "s -{ sigma }-> sigma'" := (eval s sigma sigma').
 
 Fixpoint eval_fun (s : Stmt) (env : Env) (gas: nat) : Env :=
@@ -527,6 +528,8 @@ Fixpoint eval_fun (s : Stmt) (env : Env) (gas: nat) : Env :=
                                                           | false => env
                                                         end
                                        end
+                    | switch cond s' => match (beval_fun cond env with
+                                          | (* I am stuck *)
                   end
     end.
 
