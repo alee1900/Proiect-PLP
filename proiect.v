@@ -72,16 +72,16 @@ Definition check_eq_over_types (t1 : Result) (t2 : Result) : bool :=
                    | default => true
                    | _ => false
                  end
-    | res_nat => match t2 with
-                   | res_nat => true
+    | res_nat x => match t2 with
+                   | res_nat x => true
                    | _ => false
                  end
-    | res_bool => match t2 with
-                    | res_bool => true
+    | res_bool x => match t2 with
+                    | res_bool x => true
                     | _ => false
                   end
-    | res_str => match t2 with
-                   | res_str => true
+    | res_str x => match t2 with
+                   | res_str x => true
                    | _ => false
                  end
   end.
@@ -90,6 +90,7 @@ Definition update (env : Env) (x : string) (v : Result) : Env :=
   fun y =>
     if (eqb y x)
     then
+      
         (* Fill in with your own implementation... 
            Handle here each possible usecase when updating the value of a variable.
         *)
