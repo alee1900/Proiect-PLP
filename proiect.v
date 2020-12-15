@@ -7,16 +7,16 @@ Scheme Equality for string.
 (* ErrorNat encapsulates the constructor error_nat,
    which is useful in the case of arithmetic operations like division by 0*)
 Inductive ErrorNat :=
-  | error_nat : ErrorNat
-  | num : nat -> ErrorNat.
+  | error_nat: ErrorNat
+  | num: nat -> ErrorNat.
 
 Inductive ErrorBool :=
-  | error_bool : ErrorBool
-  | boolean : bool -> ErrorBool.
+  | error_bool: ErrorBool
+  | boolean: bool -> ErrorBool.
 
 Inductive ErrorStr :=
-  | error_str : ErrorStr
-  | str : string -> ErrorStr.
+  | error_str: ErrorStr
+  | str: string -> ErrorStr.
 
 Coercion num: nat >-> ErrorNat.
 Coercion boolean: bool >-> ErrorBool.
@@ -24,12 +24,12 @@ Coercion str: string >-> ErrorStr.
 
 (* A general type which includes all kind of types *)
 Inductive Result :=
-  | err_undecl : Result
-  | err_assign : Result
-  | default : Result
-  | res_nat : ErrorNat -> Result
-  | res_bool : ErrorBool -> Result
-  | res_str : ErrorStr -> Result.
+  | err_undecl: Result
+  | err_assign: Result
+  | default: Result
+  | res_nat: ErrorNat -> Result
+  | res_bool: ErrorBool -> Result
+  | res_str: ErrorStr -> Result.
 
 Scheme Equality for Result.
 
@@ -173,32 +173,32 @@ Fixpoint aeval_fun (a : AExp) (env : Env) : ErrorNat :=
 
 (* Big-Step semantics for arithmetic operations *)
 Inductive aeval : AExp -> Env -> ErrorNat -> Prop :=
-  | const : forall n sigma, anum n =[ sigma ]=> n
-  | var : forall v sigma, avar v =[ sigma ]=>  match (sigma v) with
+  | const: forall n sigma, anum n =[ sigma ]=> n
+  | var: forall v sigma, avar v =[ sigma ]=>  match (sigma v) with
                                                  | res_nat x => x
                                                  | _ => error_nat
                                                end
-  | add : forall a1 a2 i1 i2 sigma n,
+  | add: forall a1 a2 i1 i2 sigma n,
           a1 =[ sigma ]=> i1 ->
           a2 =[ sigma ]=> i2 ->
           n = (plus_ErrorNat i1 i2) ->
           a1 +' a2 =[sigma]=> n
-  | substract : forall a1 a2 i1 i2 sigma n,
+  | substract: forall a1 a2 i1 i2 sigma n,
                 a1 =[ sigma ]=> i1 ->
                 a2 =[ sigma ]=> i2 ->
                 n = (minus_ErrorNat i1 i2) ->
                 a1 -' a2 =[sigma]=> n
-  | times : forall a1 a2 i1 i2 sigma n,
+  | times: forall a1 a2 i1 i2 sigma n,
             a1 =[ sigma ]=> i1 ->
             a2 =[ sigma ]=> i2 ->
             n = (mul_ErrorNat i1 i2) ->
             a1 *' a2 =[sigma]=> n
-  | division : forall a1 a2 i1 i2 sigma n,
+  | division: forall a1 a2 i1 i2 sigma n,
                a1 =[ sigma ]=> i1 ->
                a2 =[ sigma ]=> i2 ->
                n = (div_ErrorNat  i1 i2) ->
                a1 /' a2 =[sigma]=> n
-  | modulo : forall a1 a2 i1 i2 sigma n,
+  | modulo: forall a1 a2 i1 i2 sigma n,
              a1 =[ sigma ]=> i1 ->
              a2 =[ sigma ]=> i2 ->
              n = (mod_ErrorNat i1 i2) ->
@@ -234,12 +234,16 @@ Inductive BExp :=
   | btrue
   | bfalse
   | bvar: string -> BExp
-  | blt : AExp -> AExp -> BExp
-  | bnot : BExp -> BExp
-  | band : BExp -> BExp -> BExp
-  | bor : BExp -> BExp -> BExp.
+  | blt: AExp -> AExp -> BExp
+  | bgt: AExp -> AExp -> BExp
+  | bequal: AExp -> AExp -> BExp
+  | bnot: BExp -> BExp
+  | band: BExp -> BExp -> BExp
+  | bor: BExp -> BExp -> BExp.
 
 Notation "A <' B" := (blt A B) (at level 70).
+Notation "A >' B" := (bgt A B) (at level 70).
+Notation "A =' B" := (bequal A B) (at level 70).
 Notation "!' A" := (bnot A)(at level 51, left associativity).
 Notation "A &&' B" := (band A B)(at level 52, left associativity).
 Notation "A ||' B" := (bor A B)(at level 53, left associativity).
@@ -249,27 +253,41 @@ Definition lt_ErrorBool (n1 n2 : ErrorNat) : ErrorBool :=
     | error_nat, _ => error_bool
     | _, error_nat => error_bool
     | num v1, num v2 => boolean (Nat.ltb v1 v2)
-    end.
+  end.
+
+Definition gt_ErrorBool (n1 n2 : ErrorNat) : ErrorBool :=
+  match n1, n2 with
+    | error_nat, _ => error_bool
+    | _, error_nat => error_bool
+    | num v1, num v2 => boolean (Nat.ltb v2 v1)
+  end.
+
+Definition equal_ErrorBool (n1 n2 : ErrorNat) : ErrorBool :=
+  match n1, n2 with
+    | error_nat, _ => error_bool
+    | _, error_nat => error_bool
+    | num v1, num v2 => boolean (Nat.eqb v1 v2)
+  end.
 
 Definition not_ErrorBool (n :ErrorBool) : ErrorBool :=
   match n with
     | error_bool => error_bool
     | boolean v => boolean (negb v)
-    end.
+  end.
 
 Definition and_ErrorBool (n1 n2 : ErrorBool) : ErrorBool :=
   match n1, n2 with
     | error_bool, _ => error_bool
     | _, error_bool => error_bool
     | boolean v1, boolean v2 => boolean (andb v1 v2)
-    end.
+  end.
 
 Definition or_ErrorBool (n1 n2 : ErrorBool) : ErrorBool :=
   match n1, n2 with
     | error_bool, _ => error_bool
     | _, error_bool => error_bool
     | boolean v1, boolean v2 => boolean (orb v1 v2)
-    end.
+  end.
 
 Fixpoint beval_fun (a : BExp) (envnat : Env) : ErrorBool :=
   match a with
@@ -281,6 +299,8 @@ Fixpoint beval_fun (a : BExp) (envnat : Env) : ErrorBool :=
                   | _ => error_bool
                 end
     | blt a1 a2 => (lt_ErrorBool (aeval_fun a1 envnat) (aeval_fun a2 envnat))
+    | bgt a1 a2 => (gt_ErrorBool (aeval_fun a1 envnat) (aeval_fun a2 envnat))
+    | bequal a1 a2 => (equal_ErrorBool (aeval_fun a1 envnat) (aeval_fun a2 envnat))
     | bnot b1 => (not_ErrorBool (beval_fun b1 envnat))
     | band b1 b2 => (and_ErrorBool (beval_fun b1 envnat) (beval_fun b2 envnat))
     | bor b1 b2 => (or_ErrorBool (beval_fun b1 envnat) (beval_fun b2 envnat))
@@ -288,27 +308,37 @@ Fixpoint beval_fun (a : BExp) (envnat : Env) : ErrorBool :=
 
 Inductive beval : BExp -> Env -> ErrorBool -> Prop :=
   | b_error: forall sigma, berror  ={ sigma }=> error_bool
-  | b_true : forall sigma, btrue ={ sigma }=> true
-  | b_false : forall sigma, bfalse ={ sigma }=> false
-  | b_var : forall v sigma, bvar v ={ sigma }=>  match (sigma v) with
+  | b_true: forall sigma, btrue ={ sigma }=> true
+  | b_false: forall sigma, bfalse ={ sigma }=> false
+  | b_var: forall v sigma, bvar v ={ sigma }=>  match (sigma v) with
                                                    | res_bool x => x
                                                    | _ => error_bool
                                                  end
-  | b_lessthan : forall a1 a2 i1 i2 sigma b,
+  | b_lessthan: forall a1 a2 i1 i2 sigma b,
                  a1 =[ sigma ]=> i1 ->
                  a2 =[ sigma ]=> i2 ->
                  b = (lt_ErrorBool i1 i2) ->
                  a1 <' a2 ={ sigma }=> b
-  | b_not : forall a1 i1 sigma b,
+  | b_greaterthan: forall a1 a2 i1 i2 sigma b,
+                 a1 =[ sigma ]=> i1 ->
+                 a2 =[ sigma ]=> i2 ->
+                 b = (gt_ErrorBool i1 i2) ->
+                 a1 >' a2 ={ sigma }=> b
+  | b_equal: forall a1 a2 i1 i2 sigma b,
+                 a1 =[ sigma ]=> i1 ->
+                 a2 =[ sigma ]=> i2 ->
+                 b = (equal_ErrorBool i1 i2) ->
+                 a1 =' a2 ={ sigma }=> b
+  | b_not: forall a1 i1 sigma b,
             a1 ={ sigma }=> i1 ->
             b = (not_ErrorBool i1) ->
             !'a1 ={ sigma }=> b
-  | b_and : forall a1 a2 i1 i2 sigma b,
+  | b_and: forall a1 a2 i1 i2 sigma b,
             a1 ={ sigma }=> i1 ->
             a2 ={ sigma }=> i2 ->
             b = (and_ErrorBool i1 i2) ->
             (a1 &&' a2) ={ sigma }=> b 
-  | b_or : forall a1 a2 i1 i2 sigma b,
+  | b_or: forall a1 a2 i1 i2 sigma b,
            a1 ={ sigma }=> i1 ->
            a2 ={ sigma }=> i2 ->
            b = (or_ErrorBool i1 i2) ->
@@ -367,17 +397,17 @@ Fixpoint seval_fun (a : SExp) (env : Env) : ErrorStr :=
 
 Inductive seval : SExp -> Env -> ErrorStr -> Prop :=
   | s_error: forall sigma, serror  ={ sigma }=> error_str
-  | s_var : forall v sigma, svar v ={ sigma }=>  match (sigma v) with
+  | s_var: forall v sigma, svar v ={ sigma }=>  match (sigma v) with
                                                    | res_str x => x
                                                    | _ => error_str
                                                  end
-  | s_const : forall s sigma, sconst ={ sigma }=> s
-  | s_strstr : forall s1 s2 i1 i2 sigma s,
+  | s_const: forall s sigma, sconst ={ sigma }=> s
+  | s_strstr: forall s1 s2 i1 i2 sigma s,
                s1 =[ sigma ]=> i1 ->
                s2 =[ sigma ]=> i2 ->
                s = (strstr_error i1 i2) ->
                strstr(s1,s2) ={ sigma }=> s
-  | s_strstr : forall s1 s2 i1 i2 sigma s,
+  | s_strstr: forall s1 s2 i1 i2 sigma s,
                s1 =[ sigma ]=> i1 ->
                s2 =[ sigma ]=> i2 ->
                s = (strcmp_error i1 i2) ->
@@ -392,18 +422,25 @@ Inductive Stmt :=
   | bool_assign: string -> BExp -> Stmt
   | str_assign: string -> SExp -> Stmt
   | sequence: Stmt -> Stmt -> Stmt
-  | while: BExp -> Stmt -> Stmt
   | ifthenelse: BExp -> Stmt -> Stmt -> Stmt
-  | ifthen: BExp -> Stmt -> Stmt.
+  | ifthen: BExp -> Stmt -> Stmt
+  | while: BExp -> Stmt -> Stmt
+  | switch: AExp -> list Cases -> Stmt
+  with Cases := | default: Stmt -> Cases
+                | case: nat -> Stmt -> Cases.
 
-Notation "X :n= A" := (nat_assign X A)(at level 90).
-Notation "X :b= A" := (bool_assign X A)(at level 90).
-Notation "X :s= A" := (str_assign X A)(at level 90).
+Notation "X n= A" := (nat_assign X A)(at level 90).
+Notation "X b= A" := (bool_assign X A)(at level 90).
+Notation "X s= A" := (str_assign X A)(at level 90).
 Notation "'Nat' X ::= A" := (nat_decl X A)(at level 90).
 Notation "'Bool' X ::= A" := (bool_decl X A)(at level 90).
 Notation "'String' X ::= A" := (str_decl X A)(at level 90).
 Notation "S1 ;; S2" := (sequence S1 S2) (at level 93, right associativity).
-Notation "'fors' ( A ~ B ~ C ) { S }" := (A ;; while B ( S ;; C )) (at level 97).
+Notation "'fordo' ( A -- B -- C ) { S }" := (A ;; while B ( S ;; C )) (at level 97).
+Notation "'default' : { A }" := (default A) (at level 96).
+Notation "'case' ( A ) : { B }" := (case A B) (at level 96).
+Notation "'switch' ( A ) : { B } " := (switch A (cons B nil)) (at level 97).
+Notation "'switch' ( A ) : { B1 ; B2 ; ... ; Bn }" := (switch A (cons B1 (cons B2 .. (cons Bn nil) ..))) (at level 97).
 
 Reserved Notation "S -{ Sigma }-> Sigma'" (at level 60).
 
@@ -432,27 +469,30 @@ Inductive eval : Stmt -> Env -> Env -> Prop :=
                   a ={ sigma }=> i ->
                   sigma' = (update sigma x (res_str i)) ->
                   (x :s= a) -{ sigma }-> sigma'
-  | e_seq : forall s1 s2 sigma sigma1 sigma2,
-            s1 -{ sigma }-> sigma1 ->
-            s2 -{ sigma1 }-> sigma2 ->
-            (s1 ;; s2) -{ sigma }-> sigma2
-  | e_if_then : forall b s sigma,
-                ifthen b s -{ sigma }-> sigma
-  | e_if_then_elsetrue : forall b s1 s2 sigma sigma',
-                         b ={ sigma }=> true ->
-                         s1 -{ sigma }-> sigma' ->
+  | e_seq: forall s1 s2 sigma sigma1 sigma2,
+           s1 -{ sigma }-> sigma1 ->
+           s2 -{ sigma1 }-> sigma2 ->
+           (s1 ;; s2) -{ sigma }-> sigma2
+  | e_if_then: forall b s sigma,
+               ifthen b s -{ sigma }-> sigma
+  | e_if_then_elsetrue: forall b s1 s2 sigma sigma',
+                        b ={ sigma }=> true ->
+                        s1 -{ sigma }-> sigma' ->
+                        ifthenelse b s1 s2 -{ sigma }-> sigma' 
+  | e_if_then_elsefalse: forall b s1 s2 sigma sigma',
+                         b ={ sigma }=> false ->
+                         s2 -{ sigma }-> sigma' ->
                          ifthenelse b s1 s2 -{ sigma }-> sigma' 
-  | e_if_then_elsefalse : forall b s1 s2 sigma sigma',
-                          b ={ sigma }=> false ->
-                          s2 -{ sigma }-> sigma' ->
-                          ifthenelse b s1 s2 -{ sigma }-> sigma' 
-  | e_whilefalse : forall b s sigma,
-                   b ={ sigma }=> false ->
-                   while b s -{ sigma }-> sigma
-  | e_whiletrue : forall b s sigma sigma',
-                  b ={ sigma }=> true ->
-                  (s ;; while b s) -{ sigma }-> sigma' ->
-                  while b s -{ sigma }-> sigma'
+  | e_whilefalse: forall b s sigma,
+                  b ={ sigma }=> false ->
+                  while b s -{ sigma }-> sigma
+  | e_whiletrue: forall b s sigma sigma',
+                 b ={ sigma }=> true ->
+                 (s ;; while b s) -{ sigma }-> sigma' ->
+                 while b s -{ sigma }-> sigma'
+  | e_switch: forall a i s sigma sigma',
+              a ={ sigma }=> i ->
+              
   where "s -{ sigma }-> sigma'" := (eval s sigma sigma').
 
 Fixpoint eval_fun (s : Stmt) (env : Env) (gas: nat) : Env :=
@@ -496,16 +536,16 @@ Definition while_stmt :=
     while 
         ("i" <' 6) 
         (
-           "sum" :n= "sum" +' "i" ;;
-           "i" :n= "i" +' 1
+           "sum" n= "sum" +' "i" ;;
+           "i" n= "i" +' 1
         ).
 
 Compute (eval_fun while_stmt env 100) "sum".
 
 Definition for_stmt :=
     Nat "sum" ::= 0 ;;
-    fors ( Nat "i" ::= 0 ~ "i" <' 6 ~ "i" :n= "i" +' 1 ) {
-      "sum" :n= "sum" +' "i"
+    fordo ( Nat "i" ::= 0 -- "i" <' 6 -- "i" n= "i" +' 1 ) {
+      "sum" n= "sum" +' "i"
     }.
 
 Compute (eval_fun for_stmt env 100) "sum".
