@@ -414,13 +414,25 @@ Inductive seval : SExp -> Env -> ErrorStr -> Prop :=
                strcmp(s1,s2) ={ sigma }=> s
   where "B ={ S }=> B'" := (seval B S B').
 
+Inductive vector :=
+  | error_vector
+  | vector_nat: nat -> list ErrorNat -> vector
+  | vector_bool: bool -> list ErrorBool -> vector
+  | vector_str: string -> list ErrorStr -> vector.
+
 Inductive Stmt :=
   | nat_decl: string -> AExp -> Stmt
   | bool_decl: string -> BExp -> Stmt
   | str_decl: string -> SExp -> Stmt
+  | vectorN_decl: string -> vector -> Stmt
+  | vectorB_decl: string -> vector -> Stmt
+  | vectorS_decl: string -> vector -> Stmt
   | nat_assign: string -> AExp -> Stmt
   | bool_assign: string -> BExp -> Stmt
   | str_assign: string -> SExp -> Stmt
+  | vectorN_assign: string -> vector -> Stmt
+  | vectorB_assign: string -> vector -> Stmt
+  | vectorS_assign: string -> vector -> Stmt
   | sequence: Stmt -> Stmt -> Stmt
   | ifthenelse: BExp -> Stmt -> Stmt -> Stmt
   | ifthen: BExp -> Stmt -> Stmt
