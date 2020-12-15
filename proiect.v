@@ -105,18 +105,16 @@ Inductive AExp :=
   | adiv: AExp -> AExp -> AExp
   | amod: AExp -> AExp -> AExp.
 
-(* Coercions for numerical constants and variables *)
 Coercion anum: ErrorNat >-> AExp.
 Coercion avar: string >-> AExp.
 
-(* Notations used for arithmetic operations *)
 Notation "A +' B" := (aplus A B)(at level 50, left associativity).
 Notation "A -' B" := (aminus A B)(at level 50, left associativity).
 Notation "A *' B" := (amul A B)(at level 48, left associativity).
 Notation "A /' B" := (adiv A B)(at level 48, left associativity).
 Notation "A %' B" := (amod A B)(at level 45, left associativity).
 
-(* Notatations used for the Big-Step semantics *)
+(* Notations used for the Big-Step semantics *)
 Reserved Notation "A =[ S ]=> N" (at level 60).
 Reserved Notation "B ={ S }=> B'" (at level 70).
 
@@ -164,7 +162,7 @@ Fixpoint aeval_fun (a : AExp) (env : Env) : ErrorNat :=
   | avar v => match (env v) with
                 | res_nat n => n
                 | _ => error_nat
-                end
+              end
   | anum v => v
   | aplus a1 a2 => (plus_ErrorNat (aeval_fun a1 env) (aeval_fun a2 env))
   | aminus a1 a2 => (minus_ErrorNat (aeval_fun a1 env) (aeval_fun a2 env))
@@ -288,8 +286,6 @@ Fixpoint beval_fun (a : BExp) (envnat : Env) : ErrorBool :=
     | bor b1 b2 => (or_ErrorBool (beval_fun b1 envnat) (beval_fun b2 envnat))
   end.
 
-Reserved Notation "B ={ S }=> B'" (at level 70).
-
 Inductive beval : BExp -> Env -> ErrorBool -> Prop :=
   | b_error: forall sigma, berror  ={ sigma }=> error_bool
   | b_true : forall sigma, btrue ={ sigma }=> true
@@ -331,25 +327,78 @@ Qed.
 
 Inductive SExp :=
   | serror
-  | sconst
-  | strchr: SExp -> SExp -> BExp
-  | strcmp: SExp -> SExp -> BExp.
+  | svar: string -> SExp
+  | sconst: ErrorStr -> SExp
+  | strstr: SExp -> SExp -> SExp
+  | strcmp: SExp -> SExp -> SExp.
 
-Notation "'strchr(' A ',' B ')'" := (strchr A B)(at level 50, left associativity)
+Coercion svar: string >-> SExp.
+Coercion sconst: ErrorStr >-> SExp.
+
+Notation "'strstr(' A ',' B ')'" := (strstr A B)(at level 50, left associativity).
 Notation "'strcmp(' A ',' B ')'" := (strcmp A B)(at level 50, left associativity).
+
+(* It doesn't work from here *)
+Definition strstr_error (s1 s2 : SExp) : ErrorStr :=
+  match s1, s2 with
+    | error_str, _ => error_str
+    | _, error_str => error_str
+    | sconst str1, sconst str2 => strstr(str1,str2)
+  end.
+
+Definition strcmp_error (s1 s2 : SExp) : ErrorStr :=
+  match s1, s2 with
+    | error_str, _ => error_str
+    | _, error_str => error_str
+    | sconst str1, sconst str2 => strcmp(str1,str2)
+  end.
+
+Fixpoint seval_fun (a : SExp) (env : Env) : ErrorStr :=
+  match a with
+    | serror => error_str
+    | svar v => match (env v) with
+                  | res_str s => s
+                  | _ => error_str
+                end
+    | sconst v => v
+    | strstr a1 a2 => (strstr_error (seval_fun a1 env) (seval_fun a2 env))
+    | strcmp a1 a2 => (strcmp_error (seval_fun a1 env) (seval_fun a2 env))
+  end.
+
+Inductive seval : SExp -> Env -> ErrorStr -> Prop :=
+  | s_error: forall sigma, serror  ={ sigma }=> error_str
+  | s_var : forall v sigma, svar v ={ sigma }=>  match (sigma v) with
+                                                   | res_str x => x
+                                                   | _ => error_str
+                                                 end
+  | s_const : forall s sigma, sconst ={ sigma }=> s
+  | s_strstr : forall s1 s2 i1 i2 sigma s,
+               s1 =[ sigma ]=> i1 ->
+               s2 =[ sigma ]=> i2 ->
+               s = (strstr_error i1 i2) ->
+               strstr(s1,s2) ={ sigma }=> s
+  | s_strstr : forall s1 s2 i1 i2 sigma s,
+               s1 =[ sigma ]=> i1 ->
+               s2 =[ sigma ]=> i2 ->
+               s = (strcmp_error i1 i2) ->
+               strcmp(s1,s2) ={ sigma }=> s
+  where "B ={ S }=> B'" := (seval B S B').
 
 Inductive Stmt :=
   | nat_decl: string -> AExp -> Stmt
   | bool_decl: string -> BExp -> Stmt
-  | nat_assign : string -> AExp -> Stmt
-  | bool_assign : string -> BExp -> Stmt
-  | sequence : Stmt -> Stmt -> Stmt
-  | while : BExp -> Stmt -> Stmt
-  | ifthenelse : BExp -> Stmt -> Stmt -> Stmt
-  | ifthen : BExp -> Stmt -> Stmt.
+  | str_decl: string -> SExp -> Stmt
+  | nat_assign: string -> AExp -> Stmt
+  | bool_assign: string -> BExp -> Stmt
+  | str_assign: string -> SExp -> Stmt
+  | sequence: Stmt -> Stmt -> Stmt
+  | while: BExp -> Stmt -> Stmt
+  | ifthenelse: BExp -> Stmt -> Stmt -> Stmt
+  | ifthen: BExp -> Stmt -> Stmt.
 
 Notation "X :n= A" := (nat_assign X A)(at level 90).
 Notation "X :b= A" := (bool_assign X A)(at level 90).
+Notation "X :s= A" := (str_assign X A)(at level 90).
 Notation "'Nat' X ::= A" := (nat_decl X A)(at level 90).
 Notation "'Bool' X ::= A" := (bool_decl X A)(at level 90).
 Notation "'String' X ::= A" := (str_decl X A)(at level 90).
@@ -375,6 +424,14 @@ Inductive eval : Stmt -> Env -> Env -> Prop :=
                    a ={ sigma }=> i ->
                    sigma' = (update sigma x (res_bool i)) ->
                    (x :b= a) -{ sigma }-> sigma'
+  | e_str_decl: forall a i x sigma sigma',
+                a ={ sigma }=> i ->
+                sigma' = (update sigma x (res_str i)) ->
+                (x :s= a) -{ sigma }-> sigma'
+  | e_str_assign: forall a i x sigma sigma',
+                  a ={ sigma }=> i ->
+                  sigma' = (update sigma x (res_str i)) ->
+                  (x :s= a) -{ sigma }-> sigma'
   | e_seq : forall s1 s2 sigma sigma1 sigma2,
             s1 -{ sigma }-> sigma1 ->
             s2 -{ sigma1 }-> sigma2 ->
@@ -405,8 +462,10 @@ Fixpoint eval_fun (s : Stmt) (env : Env) (gas: nat) : Env :=
                     | sequence S1 S2 => eval_fun S2 (eval_fun S1 env gas') gas'
                     | nat_decl a aexp => update (update env a default) a (res_nat (aeval_fun aexp env))
                     | bool_decl b bexp => update (update env b default) b (res_bool (beval_fun bexp env))
+                    | str_decl s sexp => update (update env s default) s (res_str (seval_fun sexp env))
                     | nat_assign a aexp => update env a (res_nat (aeval_fun aexp env))
                     | bool_assign b bexp => update env b (res_bool (beval_fun bexp env))
+                    | str_assign s aexp => update env s (res_str (seval_fun sexp env))
                     | ifthen cond s' => match (beval_fun cond env) with
                                           | error_bool => env
                                           | boolean v => match v with
@@ -448,6 +507,5 @@ Definition for_stmt :=
     fors ( Nat "i" ::= 0 ~ "i" <' 6 ~ "i" :n= "i" +' 1 ) {
       "sum" :n= "sum" +' "i"
     }.
-
 
 Compute (eval_fun for_stmt env 100) "sum".
